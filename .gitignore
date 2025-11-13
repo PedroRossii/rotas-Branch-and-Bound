@@ -1,0 +1,24 @@
+.git
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Ambientes
+venv/
+.venv
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# Pytest
+.pytest_cache/
+
+# DADOS GRANDES - NÃO SUBIR!
+enderecos_empresas_wnames_codibge.csv
+enderecos_pr_filtered.csv
+geocode_cache.csv
+*.csv
