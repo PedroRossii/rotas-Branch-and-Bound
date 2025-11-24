@@ -2,11 +2,12 @@ import os
 import requests
 import pandas as pd
 import time
+import math
 from typing import Tuple, Optional
 
 CACHE_CSV = 'geocode_cache.csv'
-# Lê chave da variável de ambiente quando disponível; em última instância usa a chave embutida
-GOOGLE_GEOCODING_API_KEY = 'AIzaSyAwKapaVOhpPdaE7rQdvAQ9eCWRQ-Vrll8'
+# Substitua pela sua chave se necessário, ou mantenha a leitura de variável
+GOOGLE_GEOCODING_API_KEY = 'AIzaSyAwKapaVOhpPdaE7rQdvAQ9eCWRQ-Vrll8' 
 
 # Carrega cache do disco (se existir)
 def _load_cache():
@@ -38,16 +39,20 @@ def _save_cache(cache: dict):
 GEOCODING_CACHE = _load_cache()
 
 
-def geocode_address(address: str, city: str = '', state: str = 'PR', sleep: float = 0.5) -> Optional[Tuple[float, float]]:
+def geocode_address(address: str, context: str = 'Curitiba, PR', sleep: float = 0.5) -> Optional[Tuple[float, float]]:
     """
-    Geocodifica um endereço usando Google Geocoding API.
+    Geocodifica um endereço/bairro usando Google Geocoding API.
     Retorna (lat, lon) ou None se falhar. Usa cache em memória e salva em disco.
     """
-    cache_key = f"{address}|{city}|{state}".strip()
+    # Chave de cache composta
+    cache_key = f"{address}|{context}".strip()
     if cache_key in GEOCODING_CACHE:
         return GEOCODING_CACHE[cache_key]
 
-    query = f"{address}, {city}, {state}, Brasil" if address else f"{city}, {state}, Brasil"
+    # Query otimizada para Bairros de Curitiba
+    # Ex: "Batel, Curitiba, PR, Brasil"
+    query = f"{address}, {context}, Brasil"
+    
     url = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {
         'address': query,
@@ -77,25 +82,32 @@ def geocode_address(address: str, city: str = '', state: str = 'PR', sleep: floa
         return None
 
 
-def geocode_municipalities(municipios_df: pd.DataFrame, sleep: float = 0.5) -> pd.DataFrame:
+def geocode_municipalities(df: pd.DataFrame, sleep: float = 0.5) -> pd.DataFrame:
     """
-    Geocodifica municípios únicos e retorna DataFrame com (municipio, latitude, longitude).
-    Usa cache para evitar requests repetidas e salva cache em disco.
-    municipios_df: DataFrame com colunas ['municipio', 'cod_ibge', ...]
+    Geocodifica locais (Bairros) únicos e retorna DataFrame com (bairro, latitude, longitude).
+    Mantivemos o nome da função 'geocode_municipalities' para compatibilidade, 
+    mas ela agora processa a coluna 'bairro'.
     """
-    unique_municipios = municipios_df[['municipio']].drop_duplicates().reset_index(drop=True)
-    print(f'Geocodificando {len(unique_municipios)} municípios...')
+    # Identifica a coluna correta (bairro ou municipio)
+    col_name = 'bairro' if 'bairro' in df.columns else 'municipio'
+    
+    unique_locs = df[[col_name]].drop_duplicates().reset_index(drop=True)
+    print(f'Geocodificando {len(unique_locs)} locais ({col_name})...')
 
     coords = []
-    for idx, row in unique_municipios.iterrows():
-        municipio = row['municipio']
-        lat_lon = geocode_address('', city=municipio, state='PR', sleep=sleep)
+    for idx, row in unique_locs.iterrows():
+        local_nome = row[col_name]
+        
+        # Chama a geocodificação fixando o contexto de Curitiba
+        lat_lon = geocode_address(local_nome, context='Curitiba, PR', sleep=sleep)
+        
         if lat_lon:
-            coords.append({'municipio': municipio, 'latitude': lat_lon[0], 'longitude': lat_lon[1]})
+            coords.append({'bairro': local_nome, 'latitude': lat_lon[0], 'longitude': lat_lon[1]})
         else:
-            coords.append({'municipio': municipio, 'latitude': None, 'longitude': None})
-        if (idx + 1) % 10 == 0:
-            print(f'  {idx + 1} / {len(unique_municipios)} geocodificados')
+            coords.append({'bairro': local_nome, 'latitude': None, 'longitude': None})
+            
+        if (idx + 1) % 5 == 0:
+            print(f'  {idx + 1} / {len(unique_locs)} processados')
 
     # garantir que cache foi salva
     _save_cache(GEOCODING_CACHE)
@@ -106,7 +118,6 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     """
     Calcula distância em km entre dois pontos (lat, lon) usando fórmula haversine.
     """
-    import math
     R = 6371.0  # raio da Terra em km
     lat1_rad = math.radians(lat1)
     lon1_rad = math.radians(lon1)
@@ -119,20 +130,23 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return R * c
 
 
-def build_distance_matrix_from_coords(municipios_coords_df: pd.DataFrame) -> tuple:
+def build_distance_matrix_from_coords(coords_df: pd.DataFrame) -> tuple:
     """
     Constrói matriz de distâncias a partir de coordenadas.
-    Retorna (matriz numpy, lista de municípios em ordem).
+    Retorna (matriz numpy, lista de bairros em ordem).
     """
     import numpy as np
-    n = len(municipios_coords_df)
+    n = len(coords_df)
     mat = np.zeros((n, n), dtype=float)
-    municipios = municipios_coords_df['municipio'].tolist()
+    
+    # Tenta pegar coluna bairro, senão municipio
+    col_name = 'bairro' if 'bairro' in coords_df.columns else 'municipio'
+    locais = coords_df[col_name].tolist()
 
     for i in range(n):
         for j in range(i + 1, n):
-            lat1, lon1 = municipios_coords_df.iloc[i][['latitude', 'longitude']].values
-            lat2, lon2 = municipios_coords_df.iloc[j][['latitude', 'longitude']].values
+            lat1, lon1 = coords_df.iloc[i][['latitude', 'longitude']].values
+            lat2, lon2 = coords_df.iloc[j][['latitude', 'longitude']].values
             if pd.notna(lat1) and pd.notna(lon1) and pd.notna(lat2) and pd.notna(lon2):
                 dist = haversine_distance(lat1, lon1, lat2, lon2)
             else:
@@ -140,4 +154,4 @@ def build_distance_matrix_from_coords(municipios_coords_df: pd.DataFrame) -> tup
             mat[i, j] = dist
             mat[j, i] = dist
 
-    return mat, municipios
+    return mat, locais
