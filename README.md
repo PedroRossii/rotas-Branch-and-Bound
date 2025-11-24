@@ -2,7 +2,7 @@
 
 ## 📋 Descrição do Projeto
 
-Sistema completo em Python que implementa o algoritmo Branch and Bound para resolver o problema do Caixeiro Viajante (TSP) aplicado a rotas de manutenção entre municípios do Paraná, utilizando dados reais de empresas brasileiras.
+Sistema completo em Python que implementa o algoritmo Branch and Bound para resolver o problema do Caixeiro Viajante (TSP) aplicado a rotas de manutenção entre bairros do município de Curitiba, utilizando dados reais de empresas brasileiras.
 
 ## 📊 Dataset Utilizado
 
@@ -11,27 +11,22 @@ Sistema completo em Python que implementa o algoritmo Branch and Bound para reso
 - **Origem**: Kaggle
 - **Link**: https://www.kaggle.com/datasets/hiratasan/enderecosempresascomheaders?resource=download
 - **Tamanho Original**: ~7GB (44+ milhões de registros)
-- **Tamanho Filtrado (PR)**: ~150MB (registros únicos do Paraná)
+- **Tamanho Filtrado (PR - Curitiba)**: ~45MB (registros únicos de Curitiba - Paraná)
 
 ### Variáveis Relevantes
 
 | Variável | Tipo | Descrição |
 |----------|------|-----------|
 | `cnpj` | String | Cadastro Nacional de Pessoa Jurídica (identificador único) |
-| `logradouro` | String | Nome da rua/avenida |
-| `numero` | String | Número do endereço |
-| `complemento` | String | Complemento do endereço (sala, andar, etc.) |
 | `bairro` | String | Bairro da empresa |
 | `cep` | String | Código de Endereçamento Postal |
 | `municipio` | String | Nome do município |
-| `cod_ibge` | Integer | Código IBGE do município (7 dígitos) |
-| `uf` | String | Unidade Federativa (estado) |
 
 ### Contexto e Problema
 
-**Contexto**: Uma empresa de manutenção técnica precisa visitar diferentes municípios do Paraná para prestar serviços a empresas cadastradas. O número de empresas por município varia significativamente, afetando a prioridade e frequência de visitas.
+**Contexto**: Uma empresa de manutenção técnica precisa visitar diferentes bairros de Curitiba para prestar serviços a empresas cadastradas. O número de empresas por município varia significativamente, afetando a prioridade e frequência de visitas.
 
-**Problema a Resolver**: Determinar a rota ótima que minimize a distância total percorrida entre os municípios selecionados, garantindo que todos sejam visitados exatamente uma vez antes de retornar ao ponto de origem (Problema do Caixeiro Viajante - TSP).
+**Problema a Resolver**: Determinar a rota ótima que minimize a distância total percorrida entre os bairros selecionados, garantindo que todos sejam visitados exatamente uma vez antes de retornar ao ponto de origem (Problema do Caixeiro Viajante - TSP).
 
 **Aplicação Prática**: 
 - Planejamento de rotas de manutenção preventiva
@@ -44,8 +39,6 @@ Sistema completo em Python que implementa o algoritmo Branch and Bound para reso
 ```
 rotasoperacionais-A1/
 │
-├── data/                           # Dados e caches
-│   └── (arquivos CSV gerados)
 │
 ├── src/                            # Código-fonte principal
 │   ├── __init__.py
@@ -68,7 +61,7 @@ rotasoperacionais-A1/
 ├── requirements.txt                # Dependências
 │── README.md                       # Este arquivo
 │── MODELAGEM.md                    # Modelo matemático formal
-│── enderecos_pr_filtered.csv       # Arquivo gerqado após rodar o preprocess.py com os dados filtrados do dataset original
+│── enderecos_curitiba_filtered.csv # Arquivo gerqado após rodar o preprocess.py com os dados filtrados do dataset original
 └── geocode_cache.csv               # Cache da geocodificação para caso haja algum problema com a API
 ```
 
@@ -91,6 +84,7 @@ pip install -r requirements.txt
 ```
 
 3. (Primeira execução) Execute o pré-processamento:
+OBS: No Git o arquivo salvo já é o filtrado, então podemos pular essa etapa.
 ```bash
 python preprocess.py
 ```
@@ -108,7 +102,7 @@ Execute o dashboard interativo:
 python -m streamlit run app/streamlit_app.py
 ```
 
-O sistema abrirá em `http://localhost:8501` com três seções:
+O sistema abrirá em `http://localhost:8501` com quatro seções:
 
 #### 1️⃣ **EDA (Análise Exploratória)**
 - Estatísticas descritivas completas
@@ -128,6 +122,10 @@ O sistema abrirá em `http://localhost:8501` com três seções:
 - Gráficos comparativos de custo e tempo
 - Tabelas de métricas lado a lado
 - Análise de melhoria percentual
+
+#### 4 **Sensibilidade**
+- Testes do impacto do tempo de limite para rodar o algoritmo
+- Testes do impacto do número de bairros para rodar o algoritmo
 
 ### Modo 2: Linha de Comando (CLI)
 
@@ -241,11 +239,6 @@ O sistema permite avaliar o impacto de diferentes parâmetros:
    - Testes com 4, 8, 12, 16, 20 municípios
    - Análise de escalabilidade
 
-3. **Diferentes Heurísticas Iniciais**:
-   - Comparação com Nearest Neighbor
-   - Comparação com tour aleatório
-   - Impacto de boas soluções iniciais
-
 ## 🔍 Validação e Comparação
 
 ### Heurística de Referência: Nearest Neighbor
@@ -276,7 +269,7 @@ O sistema permite avaliar o impacto de diferentes parâmetros:
 
 ### Google Maps Geocoding API
 
-O sistema utiliza a API do Google Maps para converter nomes de municípios em coordenadas GPS:
+O sistema utiliza a API do Google Maps para converter nomes de bairros em coordenadas GPS:
 
 **Cache Inteligente:**
 - Armazena resultados em `geocode_cache.csv`
@@ -301,25 +294,25 @@ Onde R = 6371 km (raio médio da Terra)
 
 Todas as decisões estão documentadas em `docs/DECISOES_PREPROCESSAMENTO.md`:
 
-1. **Filtro Geográfico**: Apenas PR (reduz 98% dos dados)
+1. **Filtro Geográfico**: Apenas Curitiba-PR (reduz 99% dos dados)
 2. **Remoção de Duplicatas**: Por CNPJ (mantém primeira ocorrência)
-3. **Tratamento de Nulos**: Remoção de registros sem município/cod_ibge
+3. **Tratamento de Nulos**: Remoção de registros sem bairro
 4. **Padronização**: UTF-8, trim de espaços, tipos consistentes
-5. **Agregação**: Contagem por município para priorização
+5. **Agregação**: Contagem por bairro para priorização
 
 ## 🎯 Resultados Esperados
 
-### Instâncias Pequenas (4-8 municípios)
+### Instâncias Pequenas (4-8 bairros)
 - **B&B**: Solução ótima em < 10s
 - **Melhoria**: 5-15% sobre NN
 - **Nós Expandidos**: 50-500
 
-### Instâncias Médias (10-12 municípios)
+### Instâncias Médias (10-12 bairros)
 - **B&B**: Solução ótima ou near-ótima em 30-60s
 - **Melhoria**: 8-20% sobre NN
 - **Nós Expandidos**: 1000-5000
 
-### Instâncias Grandes (15-20 municípios)
+### Instâncias Grandes (15-20 bairros)
 - **B&B**: Melhor solução encontrada em tempo limite
 - **Melhoria**: 10-25% sobre NN
 - **Nós Expandidos**: 5000+
@@ -333,13 +326,9 @@ Projeto acadêmico desenvolvido para a disciplina de Pesquisa Operacional.
 Uso educacional - Dados públicos da Receita Federal do Brasil
 
 ## 👥 Autores
+Cassiano Duarte
+Luiz Eduardo Aben Athar Ribeiro
+Pedro Ferreira Rossi
+Wellerson Barauna
 
 Desenvolvido como trabalho acadêmico - 2025
-
----
-
-**Nota**: Este sistema é uma demonstração acadêmica. Para uso em produção, considere:
-- Algoritmos mais avançados (Christofides, Lin-Kernighan)
-- Paralelização do Branch and Bound
-- Uso de solvers comerciais (Gurobi, CPLEX)
-- API de rotas reais (Google Directions API)
