@@ -89,9 +89,9 @@ OBS: No Git o arquivo salvo já é o filtrado, então podemos pular essa etapa.
 python preprocess.py
 ```
 Este comando irá:
-- Filtrar apenas registros do Paraná (UF='PR')
+- Filtrar apenas registros do Paraná (UF='PR') e do municipio de Curitiba (municipio='Curitiba')
 - Remover duplicatas por CNPJ
-- Criar arquivo otimizado `enderecos_pr_filtered.csv`
+- Criar arquivo otimizado `enderecos_curitiba_filtered.csv`
 
 ## 📖 Como Usar
 
