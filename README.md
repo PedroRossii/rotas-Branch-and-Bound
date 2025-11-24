@@ -123,7 +123,7 @@ O sistema abrirá em `http://localhost:8501` com quatro seções:
 - Tabelas de métricas lado a lado
 - Análise de melhoria percentual
 
-#### 4 **Sensibilidade**
+#### 4️⃣ **Sensibilidade**
 - Testes do impacto do tempo de limite para rodar o algoritmo
 - Testes do impacto do número de bairros para rodar o algoritmo
 
