@@ -1,3 +1,1 @@
 *.csv filter=lfs diff=lfs merge=lfs -text
-enderecos_curitiba_filtered.csv filter=lfs diff=lfs merge=lfs -text
-geocode_cache.csv filter=lfs diff=lfs merge=lfs -text
